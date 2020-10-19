@@ -1,0 +1,70 @@
+version: '3.2'
+
+services:
+  client-web:
+    image: xsystems/windhappers-client-web:${VERSION_CLIENT_WEB}
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+    networks:
+      - windhappers-network
+
+  proxy:
+    image: xsystems/windhappers-proxy:${VERSION_PROXY}
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+    environment:
+      - LETSENCRYPT_DOMAINS
+    volumes:
+      - windhappers-letsencrypt:/etc/letsencrypt
+    networks:
+      - windhappers-network
+    ports:
+      - "80:80"
+      - "443:443"
+
+  letsencrypt-dns-cloudflare:
+    image: xsystems/letsencrypt-dns-cloudflare:${VERSION_LETSENCRYPT_DNS_CLOUDFLARE}
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+    environment:
+      - LETSENCRYPT_DOMAINS
+      - LETSENCRYPT_EMAIL
+      - LETSENCRYPT_RENEWAL_INTERVAL
+    volumes:
+      - windhappers-letsencrypt:/etc/letsencrypt
+    secrets:
+      - cloudflare-credentials
+    networks:
+      - windhappers-network
+
+
+volumes:
+  windhappers-letsencrypt:
+    external: true
+
+
+secrets:
+  cloudflare-credentials:
+    external: true
+
+
+networks:
+  windhappers-network:
