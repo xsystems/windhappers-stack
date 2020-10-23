@@ -15,7 +15,7 @@
 ## Deploy
 
 ```sh
-./deploy.sh
+./deploy(dev|prd).sh
 ```
 
 

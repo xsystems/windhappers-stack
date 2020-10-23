@@ -1,8 +1,8 @@
-version: '3.2'
+version: '3.5'
 
 services:
   client-web:
-    image: xsystems/windhappers-client-web:${VERSION_CLIENT_WEB}
+    image: xsystems/windhappers-client-web:${CLIENT_WEB_VERSION}
     deploy:
       mode: replicated
       replicas: 1
@@ -12,10 +12,10 @@ services:
         max_attempts: 3
         window: 60s
     networks:
-      - windhappers-network
+      - network
 
-  proxy:
-    image: xsystems/windhappers-proxy:${VERSION_PROXY}
+  cms-api:
+    image: xsystems/windhappers-cms-api
     deploy:
       mode: replicated
       replicas: 1
@@ -25,17 +25,55 @@ services:
         max_attempts: 3
         window: 60s
     environment:
-      - LETSENCRYPT_DOMAINS
+      - NODE_ENV=production
+    secrets:
+      - source: gcp-credentials
+        target: gcp-credentials.json
+        mode: 0400
+    networks:
+      - network
+
+  cms-gui:
+    image: xsystems/windhappers-cms-gui
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+    environment:
+      - NODE_ENV=production
+      - WINDHAPPERS_CMS_API_EXTERNAL_URL
+      - WINDHAPPERS_CMS_GUI_EXTERNAL_PATH
+    networks:
+      - network
+
+  proxy:
+    image: xsystems/windhappers-proxy:${PROXY_VERSION}
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+    environment:
+      - CLIENT_WEB_DOMAIN
+      - CMS_API_DOMAIN
+      - CMS_GUI_DOMAIN
     volumes:
       - windhappers-letsencrypt:/etc/letsencrypt
     networks:
-      - windhappers-network
+      - network
     ports:
       - "80:80"
       - "443:443"
 
   letsencrypt-dns-cloudflare:
-    image: xsystems/letsencrypt-dns-cloudflare:${VERSION_LETSENCRYPT_DNS_CLOUDFLARE}
+    image: xsystems/letsencrypt-dns-cloudflare:${LETSENCRYPT_DNS_CLOUDFLARE_VERSION}
     deploy:
       mode: replicated
       replicas: 1
@@ -47,24 +85,77 @@ services:
     environment:
       - LETSENCRYPT_DOMAINS
       - LETSENCRYPT_EMAIL
-      - LETSENCRYPT_RENEWAL_INTERVAL
     volumes:
       - windhappers-letsencrypt:/etc/letsencrypt
     secrets:
       - cloudflare-credentials
     networks:
-      - windhappers-network
+      - network
+
+  postgres:
+    image: postgres:12.3-alpine
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - network
+    ports:
+      - "5442:5432"
+    
+  postgres-gs-backup:
+    image: xsystems/postgres-gs-backup:1.1.0
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+    environment:
+      GCP_PROJECT: windhappers-web-application
+      GCP_BUCKET: windhappers-dev-backups
+      POSTGRES_HOST: postgres
+      POSTGRES_DATABASE: windhappers-cms
+    secrets:
+      - source: gcp-credentials
+        target: gcp-credentials.json
+        mode: 0400
+      - source: pgpass
+        target: .pgpass
+        mode: 0400
+    networks:
+      - network
 
 
 volumes:
   windhappers-letsencrypt:
     external: true
+  postgres-data:
+    name: windhappers_postgres-data
 
 
 secrets:
   cloudflare-credentials:
     external: true
+  gcp-credentials:
+    external: true
+    name: windhappers_gcp-credentials
+  pgpass:
+    external: true
+    name: windhappers_pgpass
 
 
 networks:
-  windhappers-network:
+  network:
+    driver: overlay
+    attachable: true

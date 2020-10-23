@@ -1,5 +1,5 @@
 #!/bin/sh
 
-. ./windhappers-stack.env
+. ./windhappers-stack-prd.env
 
 docker stack deploy --compose-file windhappers-stack.yml windhappers
