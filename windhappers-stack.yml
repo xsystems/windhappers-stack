@@ -11,11 +11,13 @@ services:
         delay: 10s
         max_attempts: 3
         window: 60s
+    environment:
+      - CLIENT_WEB_ENVIRONMENT
     networks:
       - network
 
   cms-api:
-    image: xsystems/windhappers-cms-api
+    image: xsystems/windhappers-cms-api:${CMS_API_VERSION}
     deploy:
       mode: replicated
       replicas: 1
@@ -26,6 +28,9 @@ services:
         window: 60s
     environment:
       - NODE_ENV=production
+      - CMS_API_JWT_SECRET
+      - CMS_API_UPLOAD_GS_BUCKET
+      - CMS_API_DATABASE_PASSWORD
     secrets:
       - source: gcp-credentials
         target: gcp-credentials.json
@@ -34,7 +39,7 @@ services:
       - network
 
   cms-gui:
-    image: xsystems/windhappers-cms-gui
+    image: xsystems/windhappers-cms-gui:${CMS_GUI_VERSION}
     deploy:
       mode: replicated
       replicas: 1
@@ -45,8 +50,8 @@ services:
         window: 60s
     environment:
       - NODE_ENV=production
-      - WINDHAPPERS_CMS_API_EXTERNAL_URL
-      - WINDHAPPERS_CMS_GUI_EXTERNAL_PATH
+      - CMS_API_EXTERNAL_URL
+      - CMS_GUI_EXTERNAL_PATH
     networks:
       - network
 
@@ -103,13 +108,11 @@ services:
         max_attempts: 3
         window: 60s
     environment:
-      POSTGRES_PASSWORD: "postgres"
+      - POSTGRES_PASSWORD
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - network
-    ports:
-      - "5442:5432"
     
   postgres-gs-backup:
     image: xsystems/postgres-gs-backup:1.1.0
@@ -123,7 +126,7 @@ services:
         window: 60s
     environment:
       GCP_PROJECT: windhappers-web-application
-      GCP_BUCKET: windhappers-dev-backups
+      GCP_BUCKET: ${POSTGRES_GS_BUCKET}
       POSTGRES_HOST: postgres
       POSTGRES_DATABASE: windhappers-cms
     secrets:
