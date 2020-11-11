@@ -12,7 +12,7 @@ services:
         max_attempts: 3
         window: 60s
     environment:
-      - CLIENT_WEB_ENVIRONMENT
+      CLIENT_WEB_ENVIRONMENT: ${ENVIRONMENT}
     networks:
       - network
 
@@ -39,7 +39,7 @@ services:
       - network
 
   cms-gui:
-    image: xsystems/windhappers-cms-gui:${CMS_GUI_VERSION}
+    image: xsystems/windhappers-cms-gui:${CMS_GUI_VERSION}-${ENVIRONMENT}
     deploy:
       mode: replicated
       replicas: 1
@@ -48,10 +48,6 @@ services:
         delay: 10s
         max_attempts: 3
         window: 60s
-    environment:
-      - NODE_ENV=production
-      - CMS_API_EXTERNAL_URL
-      - CMS_GUI_EXTERNAL_PATH
     networks:
       - network
 
