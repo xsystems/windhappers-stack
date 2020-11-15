@@ -17,7 +17,7 @@ services:
       - network
 
   cms-api:
-    image: xsystems/windhappers-cms-api:${CMS_API_VERSION}
+    image: xsystems/windhappers-cms-api:${CMS_VERSION}
     deploy:
       mode: replicated
       replicas: 1
@@ -39,7 +39,7 @@ services:
       - network
 
   cms-gui:
-    image: xsystems/windhappers-cms-gui:${CMS_GUI_VERSION}-${ENVIRONMENT}
+    image: xsystems/windhappers-cms-gui:${CMS_VERSION}-${ENVIRONMENT}
     deploy:
       mode: replicated
       replicas: 1
